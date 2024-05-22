@@ -10,7 +10,6 @@ SVMs are powerful machine learning algorithms that can be used for binary classi
 We trained SVM models using both linear and radial kernels:
 
 - Linear Kernel SVM: Easier to interpret but may struggle with capturing complex, nonlinear relationships.
-  
 - Radial Kernel SVM: Capable of capturing nonlinear patterns but less interpretable due to its operation in a transformed feature space.
   
 # Steps Involved:
