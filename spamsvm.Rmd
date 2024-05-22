@@ -1,0 +1,189 @@
+---
+title: "spamsvm"
+author: "Tiana Noll-Walker"
+date: "2024-05-22"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r spam }
+
+library(caret)
+library(lattice)
+
+spam <- read.csv("spam.csv")
+spam <- na.omit(spam)
+
+if ("testid" %in% colnames(spam)) {
+  # Remove the "testid" column
+  spam <- spam[, -which(names(spam) == "testid")]
+} else {
+  print("Column 'testid' not found.")
+}
+
+
+correlation_matrix <- cor(spam[, -c(1, ncol(spam))])
+highly_correlated <- findCorrelation(correlation_matrix, cutoff = 0.8)  # 
+
+highly_correlated_features <- colnames(spam[, -c(1, ncol(spam))])[highly_correlated]
+print("Highly correlated features:")
+print(highly_correlated_features)
+
+processed_spam <- spam[, -highly_correlated]  
+print(highly_correlated)
+
+```
+
+```{r task b }
+
+library(caret)
+
+set.seed(123)
+class_counts <- table(spam$spam)
+if (length(class_counts) < 2 || any(class_counts == 0)) {
+  stop("The dataset does not contain observations from both classes.")
+}
+print(class_counts)
+
+train_indices <- sample(1:nrow(spam), 300, replace = FALSE)
+train_data <- spam[train_indices, ]
+save(train_data, file = "train.RData")
+
+spam <- spam[-train_indices, ]
+
+test_indices <- sample(1:nrow(spam), 100, replace = FALSE)
+test_data <- spam[test_indices, ]
+save(test_data, file = "test.RData")
+```
+
+```{r }
+load("train.RData")
+
+train_features <- train_data[, -ncol(train_data)]
+
+pca_results <- prcomp(train_features, scale. = TRUE)
+
+summary(pca_results)
+
+plot(pca_results, type = "l", main= "variance explained by pcs")
+
+
+processed_pca_res <- prcomp(processed_spam[, -1], scale. = TRUE)
+pca_scores_processed <- as.data.frame(processed_pca_res$x)
+
+pca_scores_processed <- cbind(pca_scores_processed, class = as.factor(processed_spam$spam))
+
+#print(pca_scores_processed)
+#print(processed_pca_res)
+
+library(ggplot2)
+ggplot(data = pca_scores_processed, aes(x = PC1, y = PC2, color = class)) +
+  geom_point() +
+  labs(title = "pca of spam vs non-spam emails",
+       x = "pc1",
+       y = "pc2",
+       color = "Class") +
+  theme_minimal()
+
+
+```
+```{r 3c}
+
+library(e1071)
+load("train.RData")
+
+train_feats<-train_data[, -ncol(train_data)]
+train_response<-as.factor(train_data[, ncol(train_data)])
+
+cost_vals <- c(0.01,0.1,1,5,10,50)
+
+tune_grid <- expand.grid((cost = cost_vals))
+
+svm_tune<- tune.svm(train_feats, train_response, kernel= "linear", cost = cost_vals)
+
+if (!is.null(svm_tune$best.parameters)) {
+  optimal_cost <- svm_tune$best.parameters$cost
+} else {
+  print("Optimal cost parameter not found within the specified range.")
+}
+
+print(optimal_cost)
+
+svm_model <- svm(train_feats, train_response, kernel = "linear", cost = optimal_cost)
+
+load("test.RData")
+test_feats <- test_data[, -ncol(test_data)]
+
+predictions<- predict(svm_model, test_feats)
+
+confusion_matrix <- table(Actual=test_data[, ncol(test_data)], Predicted =predictions)
+
+confusion_matrix<-as.matrix((confusion_matrix))
+spam_actual <- confusion_matrix["5", ]
+non_spam_actual <- rowSums(confusion_matrix[-c(1), ])
+
+print(svm_model)
+
+if (spam_actual["5"] == 0) {
+  TP <- 0
+  FN <- 0
+} else {
+  TP <- spam_actual["5"]
+  FN <- sum(spam_actual[-1])
+}
+
+print(non_spam_actual)
+
+if ("5" %in% names(non_spam_actual)) {
+  FP <- non_spam_actual["5"]
+} else {
+  FP<-0
+}
+
+TN <- sum(non_spam_actual[-1])
+
+confusion_matrix <- matrix(c(TP, FP, FN, TN),
+                           nrow = 2, byrow = TRUE,
+                           dimnames = list(Actual = c("Spam", "Non-Spam"),
+                                           Predicted = c("Spam", "Non-Spam")))
+
+print(confusion_matrix)
+
+
+```
+```{r 3d}
+library(e1071)
+
+load("train.RData")
+
+train_data$spam <- factor(train_data$spam, levels = c(FALSE, TRUE), labels = c("Non-Spam", "Spam"))
+
+set.seed(1) 
+tune.out <- tune(svm, spam ~ .,
+                 data = train_data,
+                 kernel = "radial",
+                 ranges = list(gamma = c(0.5, 1, 2, 3, 4),
+                               cost = c(0.01, 0.1, 1, 5, 10, 50)))
+
+optimal_model <- tune.out$best.model
+
+load("test.RData")
+
+test_data$spam <- factor(test_data$spam, levels = c(FALSE, TRUE), labels = c("Non-Spam", "Spam"))
+
+predictions <- predict(optimal_model, newdata = test_data)
+
+confusion_matrix <- table(Actual = test_data$spam, Predicted = predictions)
+
+print(confusion_matrix)
+
+```
+# 3 e
+
+both models achieved relatively high accuracy. Looking at both confusion matrixes, you can see that both models correctly classified most of the instances. However, the linear kernel svm model had more false negatives, comapred to the radial kernel svm model which only had 4. So this suggests that the radial kernel model performed better in identifying the spam. 
+The linear kernel might offer better interpretibility as it operates in the original feature space, making it easier to understand the influence of each feature on the classification decisions. On the other hand though, the radial model operates in a high dimensional feature space transformed by the radial basis function, which makes it more difficult to interpret the decision boundaries. 
+It seems like the radial kernel might perform better when you're dealing with complex and non linear relationships between features and the target variable. This is because the radial kernel can capture non linear decision boundaries more effectively than the linear kernel. 
+
