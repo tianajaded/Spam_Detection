@@ -1,6 +1,5 @@
 ---
 title: "spamsvm"
-author: "Tiana Noll-Walker"
 date: "2024-05-22"
 output: pdf_document
 ---
