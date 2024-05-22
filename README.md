@@ -18,17 +18,9 @@ We trained SVM models using both linear and radial kernels:
 3. Evaluation: Models were evaluated using accuracy, confusion matrices, and other relevant metrics.
 
 # Results
-- Linear Kernel SVM:
+- Linear Kernel SVM:Offered better interpretability. Had more false negatives compared to the radial kernel SVM. Operated in the original feature space, making the influence of each feature on the classification decisions clearer.
 
-Offered better interpretability.
-Had more false negatives compared to the radial kernel SVM.
-Operated in the original feature space, making the influence of each feature on the classification decisions clearer.
-
--Radial Kernel SVM:
-
-Showed better performance in capturing complex, nonlinear relationships.
-Had fewer false negatives, indicating better identification of spam emails.
-Operated in a high-dimensional feature space transformed by the radial basis function, making it harder to interpret decision boundaries.
+-Radial Kernel SVM: Showed better performance in capturing complex, nonlinear relationships. Had fewer false negatives, indicating better identification of spam emails. Operated in a high-dimensional feature space transformed by the radial basis function, making it harder to interpret decision boundaries.
 
 Both models achieved relatively high accuracy, but the radial kernel model demonstrated superior performance in identifying spam emails, highlighting its capability to handle complex data.
 
